@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medidor Emocional RULER</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #444;
+        }
+
+        .gender-selection {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .gender-selection label {
+            margin: 0 10px;
+            cursor: pointer;
+        }
+
+        .gender-selection input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .mood-meter-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px; /* Espacio para las etiquetas de los ejes */
+        }
+
+        .mood-meter-grid {
+            display: grid;
+            /* 10 columnas */
+            grid-template-columns: repeat(10, 60px);
+            /* 10 filas */
+            grid-template-rows: repeat(10, 30px);
+            border: 1px solid #ccc;
+            box-shadow: 6px 6px 16px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+
+        .grid-cell {
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(0,0,0,0.05); /* Bordes más sutiles entre celdas */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5em;
+            text-align: center;
+            color: rgba(0,0,0,0.6); /* Color de texto más claro */
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            cursor: help; /* Indica interactividad */
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.5);
+            z-index: 1; /* Asegura que la celda ampliada se vea por encima */
+            box-shadow: 0 0 20px rgba(0,0,0,0.3); /* Sombra al pasar el mouse */
+        }
+
+        /* Colores de los cuadrantes RULER */
+        /* Rojo: Energía Alta, Desagradable (parte superior izquierda) */
+        .grid-cell.red {
+            background-color: #ff9999; /* Rojo más claro */
+        }
+
+        /* Amarillo: Energía Alta, Agradable (parte superior derecha) */
+        .grid-cell.yellow {
+            background-color: #ffda99; /* Amarillo más suave */
+        }
+
+        /* Azul: Energía Baja, Desagradable (parte inferior izquierda) */
+        .grid-cell.blue {
+            background-color: #99c2ff; /* Azul más claro */
+        }
+
+        /* Verde: Energía Baja, Agradable (parte inferior derecha) */
+        .grid-cell.green {
+            background-color: #99ff99; /* Verde más claro */
+        }
+
+        /* Ajustes para celdas en el centro (cercanas a los ejes) */
+        /* Celdas que cruzan la línea de Bienestar (X=0) */
+        .grid-cell[data-x="0"] {
+            border-left: 4px solid #999; /* Línea vertical */
+            border-right: 2px solid #999;
+        }
+        /* Celdas que cruzan la línea de Energía (Y=0) */
+        /* Se requiere un ajuste para seleccionar las filas 4 y 5 */
+        /*.grid-cell[data-row="4"],*/ 
+        .grid-cell[data-row="5"] {
+            border-top: 4px solid #999;
+            border-bottom: 2px solid #999;
+        }
+
+
+        .axis-label {
+            position: absolute;
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .y-axis {
+            left: -50px; /* Ajusta la posición para que no choque */
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            white-space: nowrap;
+        }
+
+        .x-axis {
+            bottom: -20px; /* Ajusta la posición */
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .emotion-display {
+            margin-top: 30px;
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            color: #555;
+            width: 600px; /* Ancho similar al medidor */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+    <h1>¿Cómo te sientes?</h1>
+
+    <div class="gender-selection">
+        <label>
+            <input type="radio" name="gender" value="masculino" checked> ♂
+        </label>
+        <label>
+            <input type="radio" name="gender" value="femenino"> ♀
+        </label>
+    </div>
+
+    <div class="mood-meter-container">
+        <div class="axis-label y-axis">Energía</div>
+        <div class="mood-meter-grid" id="moodMeterGrid">
+            </div>
+        <div class="axis-label x-axis">Bienestar</div>
+    </div>
+
+    <div class="emotion-display" id="emotionDisplay">
+        Pasa el mouse sobre una celda para ver la emoción
+    </div>
+
+    <script>
+        const emotionsData = [
+            // Cuadrante Rojo (Energía Alta, Desagradable)
+            { "emocion": "enfurecido", "femenino": "enfurecida", "coordenadas": [-5, 4.5] },
+            { "emocion": "aterrado", "femenino": "aterrada", "coordenadas": [-4, 4.5] },
+            { "emocion": "estresado", "femenino": "estresada", "coordenadas": [-3, 4.5] },
+            { "emocion": "inquieto", "femenino": "inquieta", "coordenadas": [-2, 4.5] },
+            { "emocion": "impactado", "femenino": "impactada", "coordenadas": [-1, 4.5] },
+            { "emocion": "sorprendido", "femenino": "sorprendida", "coordenadas": [0, 4.5] },
+            { "emocion": "encantado", "femenino": "encantada", "coordenadas": [1, 4.5] },
+            { "emocion": "festivo", "femenino": "festiva", "coordenadas": [2, 4.5] },
+            { "emocion": "eufórico", "femenino": "eufórica", "coordenadas": [3, 4.5] },
+            { "emocion": "extasiado", "femenino": "extasiada", "coordenadas": [4, 4.5] },
+
+            { "emocion": "desesperado", "femenino": "desesperada", "coordenadas": [-5, 3.5] },
+            { "emocion": "furioso", "femenino": "furiosa", "coordenadas": [-4, 3.5] },
+            { "emocion": "frustrado", "femenino": "frustrada", "coordenadas": [-3, 3.5] },
+            { "emocion": "tenso", "femenino": "tensa", "coordenadas": [-2, 3.5] },
+            { "emocion": "atónito", "femenino": "atónta", "coordenadas": [-1, 3.5] },
+            { "emocion": "hiperactivo", "femenino": "hiperactiva", "coordenadas": [0, 3.5] },
+            { "emocion": "jovial", "femenino": "jovial", "coordenadas": [1, 3.5] },
+            { "emocion": "motivado", "femenino": "motivada", "coordenadas": [2, 3.5] },
+            { "emocion": "inspirado", "femenino": "inspirada", "coordenadas": [3, 3.5] },
+            { "emocion": "exultante", "femenino": "exultante", "coordenadas": [4, 3.5] },
+
+            { "emocion": "exasperado", "femenino": "exasperada", "coordenadas": [-5, 2.5] },
+            { "emocion": "asustado", "femenino": "asustada", "coordenadas": [-4, 2.5] },
+            { "emocion": "enfadado", "femenino": "enfadada", "coordenadas": [-3, 2.5] },
+            { "emocion": "nervioso", "femenino": "nerviosa", "coordenadas": [-2, 2.5] },
+            { "emocion": "agitado", "femenino": "agitada", "coordenadas": [-1, 2.5] },
+            { "emocion": "enérgico", "femenino": "enérgica", "coordenadas": [0, 2.5] },
+            { "emocion": "animado", "femenino": "animada", "coordenadas": [1, 2.5] },
+            { "emocion": "emocionado", "femenino": "emocionada", "coordenadas": [2, 2.5] },
+            { "emocion": "optimista", "femenino": "optimista", "coordenadas": [3, 2.5] },
+            { "emocion": "entusiasta", "femenino": "entusiasta", "coordenadas": [4, 2.5] },
+
+            { "emocion": "ansioso", "femenino": "ansiosa", "coordenadas": [-5, 1.5] },
+            { "emocion": "aprensivo", "femenino": "aprensiva", "coordenadas": [-4, 1.5] },
+            { "emocion": "preocupado", "femenino": "preocupada", "coordenadas": [-3, 1.5] },
+            { "emocion": "irritado", "femenino": "irritada", "coordenadas": [-2, 1.5] },
+            { "emocion": "enojado", "femenino": "enojada", "coordenadas": [-1, 1.5] },
+            { "emocion": "complacido", "femenino": "complacida", "coordenadas": [0, 1.5] },
+            { "emocion": "centrado", "femenino": "centrada", "coordenadas": [1, 1.5] },
+            { "emocion": "feliz", "femenino": "feliz", "coordenadas": [2, 1.5] },
+            { "emocion": "orgulloso", "femenino": "orgullosa", "coordenadas": [3, 1.5] },
+            { "emocion": "ilusionado", "femenino": "ilusionada", "coordenadas": [4, 1.5] },
+
+            // Línea divisoria de energía (aprox. Y=0)
+            { "emocion": "indignado", "femenino": "indignada", "coordenadas": [-5, 0.5] },
+            { "emocion": "afligido", "femenino": "afligida", "coordenadas": [-4, 0.5] },
+            { "emocion": "afectado", "femenino": "afectada", "coordenadas": [-3, 0.5] },
+            { "emocion": "intranquilo", "femenino": "intranquila", "coordenadas": [-2, 0.5] },
+            { "emocion": "molesto", "femenino": "molesta", "coordenadas": [-1, 0.5] },
+            { "emocion": "agradable", "femenino": "agradable", "coordenadas": [0, 0.5] },
+            { "emocion": "alegre", "femenino": "alegre", "coordenadas": [1, 0.5] },
+            { "emocion": "esperanzado", "femenino": "esperanzada", "coordenadas": [2, 0.5] },
+            { "emocion": "juguetón", "femenino": "juguetona", "coordenadas": [3, 0.5] },
+            { "emocion": "dichoso", "femenino": "dichosa", "coordenadas": [4, 0.5] },
+
+            { "emocion": "rechazado", "femenino": "rechazada", "coordenadas": [-5, -0.5] },
+            { "emocion": "taciturno", "femenino": "taciturna", "coordenadas": [-4, -0.5] },
+            { "emocion": "decepcionado", "femenino": "decepcionada", "coordenadas": [-3, -0.5] },
+            { "emocion": "decaído", "femenino": "decaída", "coordenadas": [-2, -0.5] },
+            { "emocion": "apático", "femenino": "apática", "coordenadas": [-1, -0.5] },
+            { "emocion": "a gusto", "femenino": "a gusto", "coordenadas": [0, -0.5] },
+            { "emocion": "despreocupado", "femenino": "despreocupada", "coordenadas": [1, -0.5] },
+            { "emocion": "contento", "femenino": "contenta", "coordenadas": [2, -0.5] },
+            { "emocion": "amoroso", "femenino": "amorosa", "coordenadas": [3, -0.5] },
+            { "emocion": "realizado", "femenino": "realizada", "coordenadas": [4, -0.5] },
+
+            { "emocion": "pesimista", "femenino": "pesimista", "coordenadas": [-5, -1.5] },
+            { "emocion": "malhumorado", "femenino": "malhumorada", "coordenadas": [-4, -1.5] },
+            { "emocion": "desanimado", "femenino": "desanimada", "coordenadas": [-3, -1.5] },
+            { "emocion": "triste", "femenino": "triste", "coordenadas": [-2, -1.5] },
+            { "emocion": "aburrido", "femenino": "aburrida", "coordenadas": [-1, -1.5] },
+            { "emocion": "calmado", "femenino": "calmada", "coordenadas": [0, -1.5] },
+            { "emocion": "seguro", "femenino": "segura", "coordenadas": [1, -1.5] },
+            { "emocion": "satisfecho", "femenino": "satisfecha", "coordenadas": [2, -1.5] },
+            { "emocion": "agradecido", "femenino": "agradecida", "coordenadas": [3, -1.5] },
+            { "emocion": "conmovido", "femenino": "conmovida", "coordenadas": [4, -1.5] },
+
+            { "emocion": "enajenado", "femenino": "enajenada", "coordenadas": [-5, -2.5] },
+            { "emocion": "infeliz", "femenino": "infeliz", "coordenadas": [-4, -2.5] },
+            { "emocion": "solitario", "femenino": "solitaria", "coordenadas": [-3, -2.5] },
+            { "emocion": "descorazonado", "femenino": "descorazonada", "coordenadas": [-2, -2.5] },
+            { "emocion": "cansado", "femenino": "cansada", "coordenadas": [-1, -2.5] },
+            { "emocion": "relajado", "femenino": "relajada", "coordenadas": [0, -2.5] },
+            { "emocion": "distendido", "femenino": "distendida", "coordenadas": [1, -2.5] },
+            { "emocion": "descansado", "femenino": "descansada", "coordenadas": [2, -2.5] },
+            { "emocion": "afortunado", "femenino": "afortunada", "coordenadas": [3, -2.5] },
+            { "emocion": "equilibrado", "femenino": "equilibrada", "coordenadas": [4, -2.5] },
+
+            { "emocion": "desalentado", "femenino": "desalentada", "coordenadas": [-5, -3.5] },
+            { "emocion": "deprimido", "femenino": "deprimida", "coordenadas": [-4, -3.5] },
+            { "emocion": "huraño", "femenino": "huraña", "coordenadas": [-3, -3.5] },
+            { "emocion": "exhausto", "femenino": "exhausta", "coordenadas": [-2, -3.5] },
+            { "emocion": "fatigado", "femenino": "fatigada", "coordenadas": [-1, -3.5] },
+            { "emocion": "apacible", "femenino": "apacible", "coordenadas": [0, -3.5] },
+            { "emocion": "reflexivo", "femenino": "reflexiva", "coordenadas": [1, -3.5] },
+            { "emocion": "en paz", "femenino": "en paz", "coordenadas": [2, -3.5] },
+            { "emocion": "cómodo", "femenino": "cómoda", "coordenadas": [3, -3.5] },
+            { "emocion": "desenfadado", "femenino": "desenfadada", "coordenadas": [4, -3.5] },
+
+            // Cuadrante Azul (Energía Baja, Desagradable)
+            { "emocion": "devastado", "femenino": "devastada", "coordenadas": [-5, -4.5] },
+            { "emocion": "desesperanzado", "femenino": "desesperanzada", "coordenadas": [-4, -4.5] },
+            { "emocion": "desolado", "femenino": "desolada", "coordenadas": [-3, -4.5] },
+            { "emocion": "consumido", "femenino": "consumida", "coordenadas": [-2, -4.5] },
+            { "emocion": "agotado", "femenino": "agotada", "coordenadas": [-1, -4.5] },
+            { "emocion": "somnoliento", "femenino": "somnolienta", "coordenadas": [0, -4.5] },
+            { "emocion": "complaciente", "femenino": "complaciente", "coordenadas": [1, -4.5] },
+            { "emocion": "tranquilo", "femenino": "tranquila", "coordenadas": [2, -4.5] },
+            { "emocion": "afable", "femenino": "afable", "coordenadas": [3, -4.5] },
+            { "emocion": "sereno", "femenino": "serena", "coordenadas": [4, -4.5] },
+        ];
+
+        const moodMeterGrid = document.getElementById('moodMeterGrid');
+        const emotionDisplay = document.getElementById('emotionDisplay');
+        const genderRadios = document.querySelectorAll('input[name="gender"]');
+
+        let currentGender = 'masculino'; // Default gender
+
+        // Function to get the RULER quadrant color class
+        function getQuadrantColor(x, y) {
+            if (x >= 0 && y >= 0) return 'yellow'; // Energía Alta, Agradable
+            if (x < 0 && y >= 0) return 'red';    // Energía Alta, Desagradable
+            if (x >= 0 && y < 0) return 'green';  // Energía Baja, Agradable
+            if (x < 0 && y < 0) return 'blue';   // Energía Baja, Desagradable
+        }
+
+        // Function to update the grid based on selected gender
+        function updateGrid() {
+            moodMeterGrid.innerHTML = ''; // Clear existing cells
+
+            // Map coordinates to grid rows/columns for rendering
+            // Y: 4.5 (row 0) -> -4.5 (row 9)
+            // X: -3 (col 0) -> 3 (col 6)
+            const yCoordinates = [4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5];
+            const xCoordinates = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+
+            yCoordinates.forEach((yCoord, rowIndex) => {
+                xCoordinates.forEach((xCoord, colIndex) => {
+                    const cellData = emotionsData.find(e => e.coordenadas[0] === xCoord && e.coordenadas[1] === yCoord);
+                    if (cellData) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('grid-cell');
+                        cell.classList.add(getQuadrantColor(cellData.coordenadas[0], cellData.coordenadas[1]));
+
+                        // Add data attributes for CSS styling of axis lines
+                        cell.setAttribute('data-x', xCoord);
+                        cell.setAttribute('data-row', rowIndex); // Use row index for Y axis line
+
+                        let emotionText = cellData.emocion;
+                        if (currentGender === 'femenino' && cellData.femenino) {
+                            emotionText = cellData.femenino;
+                        }
+                        cell.textContent = emotionText.charAt(0).toUpperCase() + emotionText.slice(1); // Capitalize first letter
+
+                        cell.addEventListener('mouseover', () => {
+                            emotionDisplay.textContent = emotionText.charAt(0).toUpperCase() + emotionText.slice(1);
+                        });
+
+                        cell.addEventListener('mouseout', () => {
+                            emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
+                        });
+                        moodMeterGrid.appendChild(cell);
+                    }
+                });
+            });
+        }
+
+        // Event listener for gender selection
+        genderRadios.forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                currentGender = event.target.value;
+                updateGrid(); // Re-render the grid with the new gender
+            });
+        });
+
+        // Initial grid render
+        updateGrid();
+    </script>
+</body>
+</html>
