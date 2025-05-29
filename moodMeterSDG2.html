@@ -245,11 +245,6 @@
         Pasa el mouse sobre una celda para ver la emoción
     </div>
 
-    <!-- Audios -->
-    <audio id="audioHover" src="mouse-click-117076.mp3" preload="auto"></audio>
-    <audio id="audioClick" src="casual-click-pop-ui-4-262121.mp3" preload="auto"></audio>
-    <audio id="audioReiniciar" src="a-sudden-appearance-143034.mp3" preload="auto"></audio>
-
     <script>
         const emotionsData = [
             // Cuadrante Rojo (Energía Alta, Desagradable)
@@ -375,15 +370,9 @@
         const accionCambioTexto = document.getElementById('accionCambioTexto');
         const reiniciarBtn = document.getElementById('reiniciarBtn');
 
-        const audioHover = document.getElementById('audioHover');
-        const audioClick = document.getElementById('audioClick');
-        const audioReiniciar = document.getElementById('audioReiniciar');
-
         let currentGender = 'masculino'; // Default gender
         let situacionActualGuardada = '';
         let modoAccion = false; // false: situación actual, true: acción para el cambio
-
-        const tituloPrincipal = document.querySelector('h1');
 
         // Function to get the RULER quadrant color class
         function getQuadrantColor(x, y) {
@@ -418,10 +407,8 @@
                         }
                         cell.textContent = emotionText;
 
-                        // Mouseover: muestra emoción y reproduce sonido
+                        // Mouseover: muestra emoción
                         cell.addEventListener('mouseover', () => {
-                            audioHover.currentTime = 0;
-                            audioHover.play();
                             mostrarFrase(emotionText);
                         });
 
@@ -429,10 +416,8 @@
                             emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
                         });
 
-                        // Click: guarda situación actual o acción para el cambio y reproduce sonido
+                        // Click: guarda situación actual o acción para el cambio
                         cell.addEventListener('click', () => {
-                            audioClick.currentTime = 0;
-                            audioClick.play();
                             if (!modoAccion) {
                                 // Guardar situación actual
                                 mostrarFrase(emotionText);
@@ -444,12 +429,11 @@
                                 problematicaInput.value = '';
                                 problematicaInput.placeholder = 'Describe una posible acción';
                                 emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
-                                // Cambiar título
-                                if (tituloPrincipal) tituloPrincipal.textContent = 'Ayudará a sentirme';
                             } else {
                                 // Guardar acción para el cambio
                                 mostrarFrase(emotionText, true);
                                 accionCambioTexto.innerHTML = emotionDisplay.innerHTML;
+                                // Opcional: bloquear más cambios o permitir seguir editando
                             }
                         });
 
@@ -510,11 +494,7 @@
 
         // Botón reiniciar
         reiniciarBtn.addEventListener('click', () => {
-            audioReiniciar.currentTime = 0;
-            audioReiniciar.play();
-            setTimeout(() => {
-                window.location.reload();
-            }, 400); // Espera breve para que el sonido se escuche antes de recargar
+            window.location.reload();
         });
     </script>
 </body>
