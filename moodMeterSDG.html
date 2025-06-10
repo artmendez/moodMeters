@@ -180,9 +180,89 @@
             gap: 10px;
             z-index: 10;
         }
+
+        /* Estilos para el modal de instrucciones */
+        #modalInstrucciones {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modalInstrucciones > div {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            width: 90vw;
+            max-width: 1100px;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        #modalInstrucciones h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        #modalInstrucciones p {
+            font-size: 1.15em;
+            color: #444;
+            text-align: center;
+            max-width: 700px;
+        }
+
+        #modalInstrucciones button {
+            padding: 12px 28px;
+            font-size: 1.1em;
+            border-radius: 7px;
+            border: 1px solid #bbb;
+            background: #f7f7f7;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #videoContainer {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        #videoInstrucciones {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
     </style>
 </head>
 <body>
+    <!-- Ventana modal de bienvenida/instrucciones -->
+    <div id="modalInstrucciones" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; display:flex; align-items:center; justify-content:center;">
+        <div id="modalContent" style="background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.18); width:70vw; max-width:800px; padding:32px 24px; display:flex; flex-direction:column; align-items:center; gap:28px;">
+            <h2 style="margin:0 0 10px 0; color:#333;">Bienvenido/a</h2>
+            <p style="font-size:1.15em; color:#444; text-align:center; max-width:700px;">
+                ¿Quieres ver las instrucciones antes de comenzar?
+            </p>
+            <div id="modalBtns" style="display:flex; gap:24px;">
+                <button id="btnVerInstrucciones" style="padding:12px 28px; font-size:1.1em; border-radius:7px; border:1px solid #bbb; background:#f7f7f7; font-weight:bold; cursor:pointer;">Ver instrucciones</button>
+                <button id="btnSaltar" style="padding:12px 28px; font-size:1.1em; border-radius:7px; border:1px solid #bbb; background:#f7f7f7; font-weight:bold; cursor:pointer;">Saltar</button>
+            </div>
+            <div id="videoContainer" style="display:none; width:100%; max-width:700px;">
+                <div id="youtubeWrapper" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden;">
+                    <!-- El iframe se insertará por JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- SDG/Target/Problemática/Acción UI -->
     <div class="sdg-container">
         <select id="sdgSelect">
@@ -250,6 +330,9 @@
     <audio id="audioHover" src="mouse-click-117076.mp3" preload="auto"></audio>
     <audio id="audioClick" src="casual-click-pop-ui-4-262121.mp3" preload="auto"></audio>
     <audio id="audioReiniciar" src="a-sudden-appearance-143034.mp3" preload="auto"></audio>
+
+    <!-- Botón copiar al portapapeles -->
+    <button id="copiarBtn" style="position: absolute; top: 20px; right: 30px; z-index: 20; padding: 10px 18px; border-radius: 6px; border: 1px solid #bbb; background: #f7f7f7; font-weight: bold; cursor: pointer;">Copiar al portapapeles</button>
 
     <script>
         const emotionsData = [
@@ -564,7 +647,7 @@
             // Calcula la posición de cada celda en el canvas
             const grid = document.getElementById('moodMeterGrid');
             const gridRect = grid.getBoundingClientRect();
-            const cellWidth = grid.offsetWidth / 10;
+            const cellWidth = grid.offsetWidth / 11;
             const cellHeight = grid.offsetHeight / 10;
 
             // Primera celda (centro)
@@ -699,6 +782,79 @@
         window.addEventListener('resize', () => {
             resizeArrowCanvas();
             dibujarFlecha();
+        });
+
+        // Botón copiar al portapapeles
+        const copiarBtn = document.getElementById('copiarBtn');
+        copiarBtn.addEventListener('click', () => {
+            const situacion = situacionActualTexto.textContent.trim();
+            const accion = accionCambioTexto.textContent.trim();
+            let texto = '';
+            if (situacion) texto += `Situación actual: ${situacion}\n`;
+            if (accion) texto += `Acción para el cambio: ${accion}`;
+            if (!texto) texto = 'No hay información para copiar.';
+            navigator.clipboard.writeText(texto).then(() => {
+                copiarBtn.textContent = '¡Copiado!';
+                setTimeout(() => { copiarBtn.textContent = 'Copiar al portapapeles'; }, 1200);
+            });
+        });
+
+        // Modal instrucciones
+        const modal = document.getElementById('modalInstrucciones');
+        const btnVerInstrucciones = document.getElementById('btnVerInstrucciones');
+        const btnSaltar = document.getElementById('btnSaltar');
+        const videoContainer = document.getElementById('videoContainer');
+        const youtubeWrapper = document.getElementById('youtubeWrapper');
+        const modalBtns = document.getElementById('modalBtns');
+
+        let ytPlayer = null;
+
+        btnVerInstrucciones.addEventListener('click', () => {
+            modalBtns.style.display = 'none';
+            videoContainer.style.display = 'block';
+            // Inserta el iframe de YouTube solo una vez
+            if (!youtubeWrapper.querySelector('iframe')) {
+                const iframe = document.createElement('iframe');
+                iframe.width = "100%";
+                iframe.height = "100%";
+                iframe.style.border = "none";
+                iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+                iframe.allowFullscreen = true;
+                // Usamos enablejsapi=1 para poder detectar el final del video
+                iframe.src = "https://www.youtube.com/embed/fV7JJo4WOnQ?autoplay=1&enablejsapi=1";
+                iframe.id = "yt-instrucciones";
+                youtubeWrapper.appendChild(iframe);
+
+                // Espera a que el iframe esté en el DOM y luego crea el player de YouTube API
+                window.onYouTubeIframeAPIReady = function() {
+                    ytPlayer = new YT.Player('yt-instrucciones', {
+                        events: {
+                            'onStateChange': function(event) {
+                                // 0 = ended
+                                if (event.data === 0) {
+                                    setTimeout(() => { modal.style.display = 'none'; }, 500);
+                                }
+                            }
+                        }
+                    });
+                };
+
+                // Carga la API de YouTube si no está cargada
+                if (!window.YT) {
+                    const tag = document.createElement('script');
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    document.body.appendChild(tag);
+                }
+            }
+        });
+
+        btnSaltar.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Opcional: cerrar modal al terminar el video
+        videoInstrucciones && videoInstrucciones.addEventListener('ended', () => {
+            setTimeout(() => { modal.style.display = 'none'; }, 600);
         });
     </script>
 </body>
