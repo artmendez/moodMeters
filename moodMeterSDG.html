@@ -786,10 +786,13 @@
 
         // Botón copiar al portapapeles
         const copiarBtn = document.getElementById('copiarBtn');
+        const sdgSelect = document.getElementById('sdgSelect');
         copiarBtn.addEventListener('click', () => {
             const situacion = situacionActualTexto.textContent.trim();
             const accion = accionCambioTexto.textContent.trim();
+            const ods = sdgSelect.options[sdgSelect.selectedIndex]?.text || '';
             let texto = '';
+            if (ods && sdgSelect.value) texto += `ODS: ${ods}\n`;
             if (situacion) texto += `Situación actual: ${situacion}\n`;
             if (accion) texto += `Acción para el cambio: ${accion}`;
             if (!texto) texto = 'No hay información para copiar.';
