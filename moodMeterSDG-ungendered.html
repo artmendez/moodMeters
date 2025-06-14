@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medidor Emocional RULER</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #444;
+        }
+
+        .gender-selection {
+            margin-bottom: 20px;
+            font-size: 1.2em;
+        }
+
+        .gender-selection label {
+            margin: 0 10px;
+            cursor: pointer;
+        }
+
+        .gender-selection input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .mood-meter-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            padding: 20px; /* Espacio para las etiquetas de los ejes */
+        }
+
+        .mood-meter-grid {
+            display: grid;
+            /* 10 columnas */
+            grid-template-columns: repeat(10, 60px);
+            /* 10 filas */
+            grid-template-rows: repeat(10, 30px);
+            border: 1px solid #ccc;
+            box-shadow: 6px 6px 16px rgba(0,0,0,0.1);
+            background-color: #fff;
+        }
+
+        .grid-cell {
+            width: 100%;
+            height: 100%;
+            border: 1px solid rgba(0,0,0,0.05); /* Bordes más sutiles entre celdas */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5em;
+            text-align: center;
+            color: rgba(0,0,0,0.6); /* Color de texto más claro */
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            cursor: help; /* Indica interactividad */
+        }
+
+        .grid-cell:hover {
+            transform: scale(1.5);
+            z-index: 1; /* Asegura que la celda ampliada se vea por encima */
+            box-shadow: 0 0 20px rgba(0,0,0,0.3); /* Sombra al pasar el mouse */
+        }
+
+        /* Colores de los cuadrantes RULER */
+        /* Rojo: Energía Alta, Desagradable (parte superior izquierda) */
+        .grid-cell.red {
+            background-color: #ff9999; /* Rojo más claro */
+        }
+
+        /* Amarillo: Energía Alta, Agradable (parte superior derecha) */
+        .grid-cell.yellow {
+            background-color: #ffda99; /* Amarillo más suave */
+        }
+
+        /* Azul: Energía Baja, Desagradable (parte inferior izquierda) */
+        .grid-cell.blue {
+            background-color: #99c2ff; /* Azul más claro */
+        }
+
+        /* Verde: Energía Baja, Agradable (parte inferior derecha) */
+        .grid-cell.green {
+            background-color: #99ff99; /* Verde más claro */
+        }
+
+        /* Ajustes para celdas en el centro (cercanas a los ejes) */
+        /* Celdas que cruzan la línea de Bienestar (X=0) */
+        .grid-cell[data-x="0"] {
+            border-left: 4px solid #999; /* Línea vertical */
+            border-right: 2px solid #999;
+        }
+        /* Celdas que cruzan la línea de Energía (Y=0) */
+        /* Se requiere un ajuste para seleccionar las filas 4 y 5 */
+        /*.grid-cell[data-row="4"],*/ 
+        .grid-cell[data-row="5"] {
+            border-top: 4px solid #999;
+            border-bottom: 2px solid #999;
+        }
+
+
+        .axis-label {
+            position: absolute;
+            font-weight: bold;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .y-axis {
+            left: -50px; /* Ajusta la posición para que no choque */
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            white-space: nowrap;
+        }
+
+        .x-axis {
+            bottom: -20px; /* Ajusta la posición */
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        .emotion-display {
+            margin-top: 30px;
+            padding: 10px 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1em;
+            color: #555;
+            width: 600px; /* Ancho similar al medidor */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* Estilos para el selector de ODS y problemática */
+        #sdgSelect, #targetSelect, #problematicaInput {
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        #sdgSelect {
+            width: 220px;
+        }
+
+        #targetSelect {
+            width: 250px;
+        }
+
+        #problematicaInput {
+            width: 300px;
+        }
+
+        /* Estilos para el contenedor de selección de ODS */
+        .sdg-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        /* Estilos para el modal de instrucciones */
+        #modalInstrucciones {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modalInstrucciones > div {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+            width: 90vw;
+            max-width: 1100px;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 28px;
+        }
+
+        #modalInstrucciones h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        #modalInstrucciones p {
+            font-size: 1.15em;
+            color: #444;
+            text-align: center;
+            max-width: 700px;
+        }
+
+        #modalInstrucciones button {
+            padding: 12px 28px;
+            font-size: 1.1em;
+            border-radius: 7px;
+            border: 1px solid #bbb;
+            background: #f7f7f7;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #videoContainer {
+            display: none;
+            width: 100%;
+            max-width: 900px;
+        }
+
+        #videoInstrucciones {
+            width: 100%;
+            border-radius: 10px;
+            background: #000;
+        }
+    </style>
+</head>
+<body>
+    <!-- Ventana modal de bienvenida/instrucciones -->
+    <div id="modalInstrucciones" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.45); z-index:1000; display:flex; align-items:center; justify-content:center;">
+        <div id="modalContent" style="background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,0.18); width:70vw; max-width:800px; padding:32px 24px; display:flex; flex-direction:column; align-items:center; gap:28px;">
+            <h2 style="margin:0 0 10px 0; color:#333;">Bienvenido/a</h2>
+            <p style="font-size:1.15em; color:#444; text-align:center; max-width:700px;">
+                ¿Quieres ver las instrucciones antes de comenzar?
+            </p>
+            <div id="modalBtns" style="display:flex; gap:24px;">
+                <button id="btnVerInstrucciones" style="padding:12px 28px; font-size:1.1em; border-radius:7px; border:1px solid #bbb; background:#f7f7f7; font-weight:bold; cursor:pointer;">Ver instrucciones</button>
+                <button id="btnSaltar" style="padding:12px 28px; font-size:1.1em; border-radius:7px; border:1px solid #bbb; background:#f7f7f7; font-weight:bold; cursor:pointer;">Saltar</button>
+            </div>
+            <div id="videoContainer" style="display:none; width:100%; max-width:700px;">
+                <div id="youtubeWrapper" style="width:100%; aspect-ratio:16/9; background:#000; border-radius:10px; overflow:hidden;">
+                    <!-- El iframe se insertará por JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SDG/Target/Problemática/Acción UI -->
+    <div class="sdg-container">
+        <select id="sdgSelect">
+            <option value="">Selecciona un ODS</option>
+            <option value="1">1. Fin de la pobreza</option>
+            <option value="2">2. Hambre cero</option>
+            <option value="3">3. Salud y bienestar</option>
+            <option value="4">4. Educación de calidad</option>
+            <option value="5">5. Igualdad de género</option>
+            <option value="6">6. Agua limpia y saneamiento</option>
+            <option value="7">7. Energía asequible y no contaminante</option>
+            <option value="8">8. Trabajo decente y crecimiento económico</option>
+            <option value="9">9. Industria, innovación e infraestructura</option>
+            <option value="10">10. Reducción de las desigualdades</option>
+            <option value="11">11. Ciudades y comunidades sostenibles</option>
+            <option value="12">12. Producción y consumo responsables</option>
+            <option value="13">13. Acción por el clima</option>
+            <option value="14">14. Vida submarina</option>
+            <option value="15">15. Vida de ecosistemas terrestres</option>
+            <option value="16">16. Paz, justicia e instituciones sólidas</option>
+            <option value="17">17. Alianzas para lograr los objetivos</option>
+        </select>
+        <label id="problematicaLabel" for="problematicaInput">La problemática relacionada:</label>
+        <input type="text" id="problematicaInput" placeholder="Describe la problemática">
+        <button id="reiniciarBtn" style="margin-left:auto;">Reiniciar</button>
+    </div>
+    <p></p>
+    <h1>Hace que me sienta</h1>
+
+    <div style="display: flex; flex-direction: row; align-items: flex-start; width: 100%; justify-content: center;">
+        <!-- Marco Situación actual -->
+        <div id="situacionActualMarco" style="width: 250px; min-height: 80px; border: 2px solid #bbb; border-radius: 8px; background: #f9f9f9; margin-right: 30px; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center;">
+            <strong>Situación actual</strong>
+            <div id="situacionActualTexto" style="margin-top: 10px; text-align: center; min-height: 40px; color: #444;"></div>
+        </div>
+
+        <div class="mood-meter-container" style="position:relative;">
+            <canvas id="arrowCanvas" width="600" height="300" style="position:absolute; top:0; left:0; pointer-events:none; z-index:2;"></canvas>
+            <div class="axis-label y-axis">Energía</div>
+            <div class="mood-meter-grid" id="moodMeterGrid" style="position:relative; z-index:3;"></div>
+            <div class="axis-label x-axis">Bienestar</div>
+        </div>
+
+        <!-- Marco Acción para el cambio -->
+        <div id="accionCambioMarco" style="width: 250px; min-height: 80px; border: 2px solid #bbb; border-radius: 8px; background: #f9f9f9; margin-left: 30px; padding: 12px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center;">
+            <strong>Acción para el cambio</strong>
+            <div id="accionCambioTexto" style="margin-top: 10px; text-align: center; min-height: 40px; color: #444;"></div>
+        </div>
+    </div>
+
+    <div class="emotion-display" id="emotionDisplay">
+        Pasa el mouse sobre una celda para ver la emoción
+    </div>
+
+    <!-- Audios -->
+    <audio id="audioHover" src="mouse-click-117076.mp3" preload="auto"></audio>
+    <audio id="audioClick" src="casual-click-pop-ui-4-262121.mp3" preload="auto"></audio>
+    <audio id="audioReiniciar" src="a-sudden-appearance-143034.mp3" preload="auto"></audio>
+
+    <!-- Botón copiar al portapapeles -->
+    <button id="copiarBtn" style="position: absolute; top: 20px; right: 30px; z-index: 20; padding: 10px 18px; border-radius: 6px; border: 1px solid #bbb; background: #f7f7f7; font-weight: bold; cursor: pointer;">Copiar al portapapeles</button>
+
+    <script>
+        // Emociones en estilo neutro y genérico
+        const emotionsData = [
+            // Cuadrante Rojo (Energía Alta, Desagradable)
+            { "emocion": "con mucha ira", "coordenadas": [-5, 4.5] },
+            { "emocion": "con mucho miedo", "coordenadas": [-4, 4.5] },
+            { "emocion": "con estrés", "coordenadas": [-3, 4.5] },
+            { "emocion": "con inquietud", "coordenadas": [-2, 4.5] },
+            { "emocion": "con impacto", "coordenadas": [-1, 4.5] },
+            { "emocion": "con sorpresa", "coordenadas": [0, 4.5] },
+            { "emocion": "con mucho entusiasmo", "coordenadas": [1, 4.5] },
+            { "emocion": "en ambiente festivo", "coordenadas": [2, 4.5] },
+            { "emocion": "con euforia", "coordenadas": [3, 4.5] },
+            { "emocion": "con éxtasis", "coordenadas": [4, 4.5] },
+
+            { "emocion": "con desesperación", "coordenadas": [-5, 3.5] },
+            { "emocion": "con furia", "coordenadas": [-4, 3.5] },
+            { "emocion": "con frustración", "coordenadas": [-3, 3.5] },
+            { "emocion": "con tensión", "coordenadas": [-2, 3.5] },
+            { "emocion": "con asombro", "coordenadas": [-1, 3.5] },
+            { "emocion": "con mucha actividad", "coordenadas": [0, 3.5] },
+            { "emocion": "con jovialidad", "coordenadas": [1, 3.5] },
+            { "emocion": "con motivación", "coordenadas": [2, 3.5] },
+            { "emocion": "con inspiración", "coordenadas": [3, 3.5] },
+            { "emocion": "con exaltación", "coordenadas": [4, 3.5] },
+
+            { "emocion": "con exasperación", "coordenadas": [-5, 2.5] },
+            { "emocion": "con temor", "coordenadas": [-4, 2.5] },
+            { "emocion": "con enfado", "coordenadas": [-3, 2.5] },
+            { "emocion": "con nerviosismo", "coordenadas": [-2, 2.5] },
+            { "emocion": "con agitación", "coordenadas": [-1, 2.5] },
+            { "emocion": "con energía", "coordenadas": [0, 2.5] },
+            { "emocion": "con ánimo", "coordenadas": [1, 2.5] },
+            { "emocion": "con emoción", "coordenadas": [2, 2.5] },
+            { "emocion": "con optimismo", "coordenadas": [3, 2.5] },
+            { "emocion": "con entusiasmo", "coordenadas": [4, 2.5] },
+
+            { "emocion": "con ansiedad", "coordenadas": [-5, 1.5] },
+            { "emocion": "con aprensión", "coordenadas": [-4, 1.5] },
+            { "emocion": "con preocupación", "coordenadas": [-3, 1.5] },
+            { "emocion": "con irritación", "coordenadas": [-2, 1.5] },
+            { "emocion": "con enojo", "coordenadas": [-1, 1.5] },
+            { "emocion": "con complacencia", "coordenadas": [0, 1.5] },
+            { "emocion": "con concentración", "coordenadas": [1, 1.5] },
+            { "emocion": "con felicidad", "coordenadas": [2, 1.5] },
+            { "emocion": "con orgullo", "coordenadas": [3, 1.5] },
+            { "emocion": "con ilusión", "coordenadas": [4, 1.5] },
+
+            // Línea divisoria de energía (aprox. Y=0)
+            { "emocion": "con indignación", "coordenadas": [-5, 0.5] },
+            { "emocion": "con aflicción", "coordenadas": [-4, 0.5] },
+            { "emocion": "con afectación", "coordenadas": [-3, 0.5] },
+            { "emocion": "con intranquilidad", "coordenadas": [-2, 0.5] },
+            { "emocion": "con molestia", "coordenadas": [-1, 0.5] },
+            { "emocion": "con agrado", "coordenadas": [0, 0.5] },
+            { "emocion": "con alegría", "coordenadas": [1, 0.5] },
+            { "emocion": "con esperanza", "coordenadas": [2, 0.5] },
+            { "emocion": "con actitud juguetona", "coordenadas": [3, 0.5] },
+            { "emocion": "con dicha", "coordenadas": [4, 0.5] },
+
+            { "emocion": "con rechazo", "coordenadas": [-5, -0.5] },
+            { "emocion": "con melancolía", "coordenadas": [-4, -0.5] },
+            { "emocion": "con decepción", "coordenadas": [-3, -0.5] },
+            { "emocion": "con decaimiento", "coordenadas": [-2, -0.5] },
+            { "emocion": "con apatía", "coordenadas": [-1, -0.5] },
+            { "emocion": "a gusto", "coordenadas": [0, -0.5] },
+            { "emocion": "con despreocupación", "coordenadas": [1, -0.5] },
+            { "emocion": "con contento", "coordenadas": [2, -0.5] },
+            { "emocion": "con afecto", "coordenadas": [3, -0.5] },
+            { "emocion": "con realización", "coordenadas": [4, -0.5] },
+
+            { "emocion": "con pesimismo", "coordenadas": [-5, -1.5] },
+            { "emocion": "con malhumor", "coordenadas": [-4, -1.5] },
+            { "emocion": "con desánimo", "coordenadas": [-3, -1.5] },
+            { "emocion": "con tristeza", "coordenadas": [-2, -1.5] },
+            { "emocion": "con aburrimiento", "coordenadas": [-1, -1.5] },
+            { "emocion": "con calma", "coordenadas": [0, -1.5] },
+            { "emocion": "con seguridad", "coordenadas": [1, -1.5] },
+            { "emocion": "con satisfacción", "coordenadas": [2, -1.5] },
+            { "emocion": "con gratitud", "coordenadas": [3, -1.5] },
+            { "emocion": "conmovido/a", "coordenadas": [4, -1.5] }, // Puedes ajustar a "conmovido" si prefieres
+
+            { "emocion": "con sensación de alienación", "coordenadas": [-5, -2.5] },
+            { "emocion": "con infelicidad", "coordenadas": [-4, -2.5] },
+            { "emocion": "con soledad", "coordenadas": [-3, -2.5] },
+            { "emocion": "con desaliento", "coordenadas": [-2, -2.5] },
+            { "emocion": "con cansancio", "coordenadas": [-1, -2.5] },
+            { "emocion": "con relajación", "coordenadas": [0, -2.5] },
+            { "emocion": "con distensión", "coordenadas": [1, -2.5] },
+            { "emocion": "con descanso", "coordenadas": [2, -2.5] },
+            { "emocion": "con fortuna", "coordenadas": [3, -2.5] },
+            { "emocion": "con equilibrio", "coordenadas": [4, -2.5] },
+
+            { "emocion": "con desaliento", "coordenadas": [-5, -3.5] },
+            { "emocion": "con depresión", "coordenadas": [-4, -3.5] },
+            { "emocion": "con aislamiento", "coordenadas": [-3, -3.5] },
+            { "emocion": "con agotamiento", "coordenadas": [-2, -3.5] },
+            { "emocion": "con fatiga", "coordenadas": [-1, -3.5] },
+            { "emocion": "con apacibilidad", "coordenadas": [0, -3.5] },
+            { "emocion": "con reflexión", "coordenadas": [1, -3.5] },
+            { "emocion": "en paz", "coordenadas": [2, -3.5] },
+            { "emocion": "con comodidad", "coordenadas": [3, -3.5] },
+            { "emocion": "con desenfado", "coordenadas": [4, -3.5] },
+
+            // Cuadrante Azul (Energía Baja, Desagradable)
+            { "emocion": "con devastación", "coordenadas": [-5, -4.5] },
+            { "emocion": "sin esperanza", "coordenadas": [-4, -4.5] },
+            { "emocion": "con desolación", "coordenadas": [-3, -4.5] },
+            { "emocion": "con sensación de estar consumido", "coordenadas": [-2, -4.5] },
+            { "emocion": "con agotamiento extremo", "coordenadas": [-1, -4.5] },
+            { "emocion": "con sueño", "coordenadas": [0, -4.5] },
+            { "emocion": "con complacencia", "coordenadas": [1, -4.5] },
+            { "emocion": "con tranquilidad", "coordenadas": [2, -4.5] },
+            { "emocion": "con afabilidad", "coordenadas": [3, -4.5] },
+            { "emocion": "con serenidad", "coordenadas": [4, -4.5] },
+        ];
+
+        const moodMeterGrid = document.getElementById('moodMeterGrid');
+        const emotionDisplay = document.getElementById('emotionDisplay');
+        const problematicaInput = document.getElementById('problematicaInput');
+        const problematicaLabel = document.getElementById('problematicaLabel');
+        const situacionActualTexto = document.getElementById('situacionActualTexto');
+        const accionCambioTexto = document.getElementById('accionCambioTexto');
+        const reiniciarBtn = document.getElementById('reiniciarBtn');
+
+        const audioHover = document.getElementById('audioHover');
+        const audioClick = document.getElementById('audioClick');
+        const audioReiniciar = document.getElementById('audioReiniciar');
+
+        let situacionActualGuardada = '';
+        let modoAccion = false; // false: situación actual, true: acción para el cambio
+
+        const tituloPrincipal = document.querySelector('h1');
+
+        // Function to get the RULER quadrant color class
+        function getQuadrantColor(x, y) {
+            if (x >= 0 && y >= 0) return 'yellow'; // Energía Alta, Agradable
+            if (x < 0 && y >= 0) return 'red';    // Energía Alta, Desagradable
+            if (x >= 0 && y < 0) return 'green';  // Energía Baja, Agradable
+            if (x < 0 && y < 0) return 'blue';   // Energía Baja, Desagradable
+        }
+
+        // Function to update the grid (sin género)
+        function updateGrid() {
+            moodMeterGrid.innerHTML = ''; // Clear existing cells
+
+            const yCoordinates = [4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5];
+            const xCoordinates = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+
+            yCoordinates.forEach((yCoord, rowIndex) => {
+                xCoordinates.forEach((xCoord, colIndex) => {
+                    const cellData = emotionsData.find(e => e.coordenadas[0] === xCoord && e.coordenadas[1] === yCoord);
+                    if (cellData) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('grid-cell');
+                        cell.classList.add(getQuadrantColor(cellData.coordenadas[0], cellData.coordenadas[1]));
+
+                        // Add data attributes for CSS styling of axis lines
+                        cell.setAttribute('data-x', xCoord);
+                        cell.setAttribute('data-row', rowIndex);
+
+                        let emotionText = cellData.emocion;
+                        cell.textContent = emotionText;
+
+                        // Mouseover: muestra emoción y reproduce sonido
+                        cell.addEventListener('mouseover', () => {
+                            audioHover.currentTime = 0;
+                            audioHover.play();
+                            mostrarFrase(emotionText);
+                        });
+
+                        cell.addEventListener('mouseout', () => {
+                            emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
+                        });
+
+                        // Click: guarda situación actual o acción para el cambio y reproduce sonido
+                        cell.addEventListener('click', () => {
+                            audioClick.currentTime = 0;
+                            audioClick.play();
+
+                            // Guardar selección para la flecha
+                            if (!modoAccion) {
+                                // Primera selección
+                                primeraSeleccion = { x: xCoord, y: yCoord, row: rowIndex, col: colIndex };
+                                segundaSeleccion = null;
+                            } else {
+                                // Segunda selección
+                                if (primeraSeleccion) {
+                                    segundaSeleccion = { x: xCoord, y: yCoord, row: rowIndex, col: colIndex };
+                                }
+                            }
+                            dibujarFlecha();
+
+                            if (!modoAccion) {
+                                // Guardar situación actual
+                                mostrarFrase(emotionText);
+                                situacionActualTexto.innerHTML = emotionDisplay.innerHTML;
+                                situacionActualGuardada = emotionText;
+                                // Cambiar a modo acción
+                                modoAccion = true;
+                                problematicaLabel.textContent = 'Posible acción:';
+                                problematicaInput.value = '';
+                                problematicaInput.placeholder = 'Describe una posible acción';
+                                emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
+                                // Cambiar título
+                                if (tituloPrincipal) tituloPrincipal.textContent = 'Ayudará a sentirse';
+                            } else {
+                                // Guardar acción para el cambio
+                                mostrarFrase(emotionText, true);
+                                accionCambioTexto.innerHTML = emotionDisplay.innerHTML;
+                            }
+                        });
+
+                        moodMeterGrid.appendChild(cell);
+                    }
+                });
+            });
+
+            // Redimensiona el canvas y dibuja la flecha si corresponde
+            setTimeout(() => {
+                resizeArrowCanvas();
+                dibujarFlecha();
+            }, 0);
+        }
+
+        // Mostrar frase en emotionDisplay (neutro)
+        function mostrarFrase(emotionText, esAccion = false) {
+            const inputValue = problematicaInput.value.trim();
+            let displayText = '';
+            const emotionFormatted = `<b>${emotionText}</b>`;
+            if (!esAccion) {
+                if (inputValue) {
+                    displayText = `La situación "<i>${inputValue}</i>" hace que me sienta  ${emotionFormatted}.`;
+                } else {
+                    displayText = `Hace que me sienta ${emotionFormatted}.`;
+                }
+            } else {
+                if (inputValue) {
+                    displayText = `Si realizara "<i>${inputValue}</i>", haría que me sienta ${emotionFormatted}.`;
+                } else {
+                    displayText = `Haría que me sienta ${emotionFormatted}.`;
+                }
+            }
+            emotionDisplay.innerHTML = displayText;
+        }
+
+        // Initial grid render
+        updateGrid();
+
+        // Actualiza emotionDisplay si cambia el input, según el modo
+        problematicaInput.addEventListener('input', () => {
+            // Si se está mostrando una emoción, actualiza la frase
+            const currentText = emotionDisplay.innerHTML;
+            if (
+                currentText !== 'Pasa el mouse sobre una celda para ver la emoción' &&
+                currentText !== ''
+            ) {
+                // Buscar la emoción mostrada
+                const match = currentText.match(/(?:me hace sentir|hará que me sienta)(?:\s|&nbsp;)?(?:<b>)?\s?(.+?)(?:<\/b>)?\./i);
+                if (match) {
+                    const emotion = match[1];
+                    mostrarFrase(emotion, modoAccion);
+                }
+            }
+        });
+
+        // Botón reiniciar
+        reiniciarBtn.addEventListener('click', () => {
+            audioReiniciar.currentTime = 0;
+            audioReiniciar.play();
+            setTimeout(() => {
+                window.location.reload();
+            }, 400); // Espera breve para que el sonido se escuche antes de recargar
+        });
+
+        // Variables para guardar la posición de las celdas seleccionadas
+        let primeraSeleccion = null; // {x, y, row, col}
+        let segundaSeleccion = null;
+
+        // Referencia al canvas de la flecha
+        const arrowCanvas = document.getElementById('arrowCanvas');
+        const ctxArrow = arrowCanvas.getContext('2d');
+
+        // Ajusta el tamaño del canvas al tamaño de la cuadrícula
+        function resizeArrowCanvas() {
+            const grid = document.getElementById('moodMeterGrid');
+            const rect = grid.getBoundingClientRect();
+            arrowCanvas.width = rect.width;
+            arrowCanvas.height = rect.height;
+            arrowCanvas.style.width = rect.width + 'px';
+            arrowCanvas.style.height = rect.height + 'px';
+        }
+
+        // Dibuja la flecha entre dos celdas
+        function dibujarFlecha() {
+            ctxArrow.clearRect(0, 0, arrowCanvas.width, arrowCanvas.height);
+            if (!primeraSeleccion || !segundaSeleccion) return;
+
+            // Calcula la posición de cada celda en el canvas
+            const grid = document.getElementById('moodMeterGrid');
+            const gridRect = grid.getBoundingClientRect();
+            const cellWidth = grid.offsetWidth / 11;
+            const cellHeight = grid.offsetHeight / 10;
+
+            // Primera celda (centro)
+            const x1 = (primeraSeleccion.col + 0.5) * cellWidth;
+            const y1 = (primeraSeleccion.row + 0.5) * cellHeight;
+            // Segunda celda (centro)
+            const x2 = (segundaSeleccion.col + 0.5) * cellWidth;
+            const y2 = (segundaSeleccion.row + 0.5) * cellHeight;
+
+            // Dibuja línea gruesa
+            ctxArrow.save();
+            ctxArrow.strokeStyle = "#333";
+            ctxArrow.lineWidth = 10;
+            ctxArrow.lineCap = "round";
+            ctxArrow.beginPath();
+            ctxArrow.moveTo(x1, y1);
+            ctxArrow.lineTo(x2, y2);
+            ctxArrow.stroke();
+
+            // Dibuja la punta de la flecha
+            const angle = Math.atan2(y2 - y1, x2 - x1);
+            const arrowLength = 32;
+            const arrowWidth = 18;
+            ctxArrow.beginPath();
+            ctxArrow.moveTo(x2, y2);
+            ctxArrow.lineTo(
+                x2 - arrowLength * Math.cos(angle - Math.PI / 7),
+                y2 - arrowLength * Math.sin(angle - Math.PI / 7)
+            );
+            ctxArrow.lineTo(
+                x2 - arrowWidth * Math.cos(angle),
+                y2 - arrowWidth * Math.sin(angle)
+            );
+            ctxArrow.lineTo(
+                x2 - arrowLength * Math.cos(angle + Math.PI / 7),
+                y2 - arrowLength * Math.sin(angle + Math.PI / 7)
+            );
+            ctxArrow.lineTo(x2, y2);
+            ctxArrow.closePath();
+            ctxArrow.fillStyle = "#333";
+            ctxArrow.fill();
+            ctxArrow.restore();
+        }
+
+        // Modifica updateGrid para guardar la selección y dibujar la flecha
+        function updateGrid() {
+            moodMeterGrid.innerHTML = ''; // Clear existing cells
+
+            const yCoordinates = [4.5, 3.5, 2.5, 1.5, 0.5, -0.5, -1.5, -2.5, -3.5, -4.5];
+            const xCoordinates = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+
+            yCoordinates.forEach((yCoord, rowIndex) => {
+                xCoordinates.forEach((xCoord, colIndex) => {
+                    const cellData = emotionsData.find(e => e.coordenadas[0] === xCoord && e.coordenadas[1] === yCoord);
+                    if (cellData) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('grid-cell');
+                        cell.classList.add(getQuadrantColor(cellData.coordenadas[0], cellData.coordenadas[1]));
+
+                        // Add data attributes for CSS styling of axis lines
+                        cell.setAttribute('data-x', xCoord);
+                        cell.setAttribute('data-row', rowIndex);
+
+                        let emotionText = cellData.emocion;
+                        cell.textContent = emotionText;
+
+                        // Mouseover: muestra emoción y reproduce sonido
+                        cell.addEventListener('mouseover', () => {
+                            audioHover.currentTime = 0;
+                            audioHover.play();
+                            mostrarFrase(emotionText);
+                        });
+
+                        cell.addEventListener('mouseout', () => {
+                            emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
+                        });
+
+                        // Click: guarda situación actual o acción para el cambio y reproduce sonido
+                        cell.addEventListener('click', () => {
+                            audioClick.currentTime = 0;
+                            audioClick.play();
+
+                            // Guardar selección para la flecha
+                            if (!modoAccion) {
+                                // Primera selección
+                                primeraSeleccion = { x: xCoord, y: yCoord, row: rowIndex, col: colIndex };
+                                segundaSeleccion = null;
+                            } else {
+                                // Segunda selección
+                                if (primeraSeleccion) {
+                                    segundaSeleccion = { x: xCoord, y: yCoord, row: rowIndex, col: colIndex };
+                                }
+                            }
+                            dibujarFlecha();
+
+                            if (!modoAccion) {
+                                // Guardar situación actual
+                                mostrarFrase(emotionText);
+                                situacionActualTexto.innerHTML = emotionDisplay.innerHTML;
+                                situacionActualGuardada = emotionText;
+                                // Cambiar a modo acción
+                                modoAccion = true;
+                                problematicaLabel.textContent = 'Posible acción:';
+                                problematicaInput.value = '';
+                                problematicaInput.placeholder = 'Describe una posible acción';
+                                emotionDisplay.textContent = 'Pasa el mouse sobre una celda para ver la emoción';
+                                // Cambiar título
+                                if (tituloPrincipal) tituloPrincipal.textContent = 'Ayudará a sentirse';
+                            } else {
+                                // Guardar acción para el cambio
+                                mostrarFrase(emotionText, true);
+                                accionCambioTexto.innerHTML = emotionDisplay.innerHTML;
+                            }
+                        });
+
+                        moodMeterGrid.appendChild(cell);
+                    }
+                });
+            });
+
+            // Redimensiona el canvas y dibuja la flecha si corresponde
+            setTimeout(() => {
+                resizeArrowCanvas();
+                dibujarFlecha();
+            }, 0);
+        }
+
+        // Redibuja la flecha si la ventana cambia de tamaño
+        window.addEventListener('resize', () => {
+            resizeArrowCanvas();
+            dibujarFlecha();
+        });
+
+        // Botón copiar al portapapeles
+        const copiarBtn = document.getElementById('copiarBtn');
+        const sdgSelect = document.getElementById('sdgSelect');
+        copiarBtn.addEventListener('click', () => {
+            const situacion = situacionActualTexto.textContent.trim();
+            const accion = accionCambioTexto.textContent.trim();
+            const ods = sdgSelect.options[sdgSelect.selectedIndex]?.text || '';
+            let texto = '';
+            if (ods && sdgSelect.value) texto += `ODS: ${ods}\n`;
+            if (situacion) texto += `Situación actual: ${situacion}\n`;
+            if (accion) texto += `Acción para el cambio: ${accion}`;
+            if (!texto) texto = 'No hay información para copiar.';
+            navigator.clipboard.writeText(texto).then(() => {
+                copiarBtn.textContent = '¡Copiado!';
+                setTimeout(() => { copiarBtn.textContent = 'Copiar al portapapeles'; }, 1200);
+            });
+        });
+
+        // Modal instrucciones
+        const modal = document.getElementById('modalInstrucciones');
+        const btnVerInstrucciones = document.getElementById('btnVerInstrucciones');
+        const btnSaltar = document.getElementById('btnSaltar');
+        const videoContainer = document.getElementById('videoContainer');
+        const youtubeWrapper = document.getElementById('youtubeWrapper');
+        const modalBtns = document.getElementById('modalBtns');
+
+        let ytPlayer = null;
+
+        btnVerInstrucciones.addEventListener('click', () => {
+            modalBtns.style.display = 'none';
+            videoContainer.style.display = 'block';
+            // Inserta el iframe de YouTube solo una vez
+            if (!youtubeWrapper.querySelector('iframe')) {
+                const iframe = document.createElement('iframe');
+                iframe.width = "100%";
+                iframe.height = "100%";
+                iframe.style.border = "none";
+                iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+                iframe.allowFullscreen = true;
+                // Usamos enablejsapi=1 para poder detectar el final del video
+                iframe.src = "https://www.youtube.com/embed/fV7JJo4WOnQ?autoplay=1&enablejsapi=1";
+                iframe.id = "yt-instrucciones";
+                youtubeWrapper.appendChild(iframe);
+
+                // Espera a que el iframe esté en el DOM y luego crea el player de YouTube API
+                window.onYouTubeIframeAPIReady = function() {
+                    ytPlayer = new YT.Player('yt-instrucciones', {
+                        events: {
+                            'onStateChange': function(event) {
+                                // 0 = ended
+                                if (event.data === 0) {
+                                    setTimeout(() => { modal.style.display = 'none'; }, 500);
+                                }
+                            }
+                        }
+                    });
+                };
+
+                // Carga la API de YouTube si no está cargada
+                if (!window.YT) {
+                    const tag = document.createElement('script');
+                    tag.src = "https://www.youtube.com/iframe_api";
+                    document.body.appendChild(tag);
+                }
+            }
+        });
+
+        btnSaltar.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        // Opcional: cerrar modal al terminar el video
+        videoInstrucciones && videoInstrucciones.addEventListener('ended', () => {
+            setTimeout(() => { modal.style.display = 'none'; }, 600);
+        });
+    </script>
+</body>
+</html>
