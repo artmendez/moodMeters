@@ -799,7 +799,7 @@
             });
         });
 
-        // Modal instrucciones
+        // popup de instrucciones
         const modal = document.getElementById('modalInstrucciones');
         const btnVerInstrucciones = document.getElementById('btnVerInstrucciones');
         const btnSaltar = document.getElementById('btnSaltar');
@@ -852,7 +852,7 @@
             modal.style.display = 'none';
         });
 
-        // Opcional: cerrar modal al terminar el video
+        // Opcional: cerrar popup al terminar el video
         videoInstrucciones && videoInstrucciones.addEventListener('ended', () => {
             setTimeout(() => { modal.style.display = 'none'; }, 600);
         });
