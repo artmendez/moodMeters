@@ -777,6 +777,10 @@
         // Botón copiar al portapapeles
         const copiarBtn = document.getElementById('copiarBtn');
         const sdgSelect = document.getElementById('sdgSelect');
+
+        // Añade el audio para el sonido de copiar
+        const audioCopiar = new Audio('coin_2-89099.mp3');
+
         copiarBtn.addEventListener('click', () => {
             const situacion = situacionActualTexto.textContent.trim();
             const accion = accionCambioTexto.textContent.trim();
@@ -788,6 +792,9 @@
             if (!texto) texto = 'No hay información para copiar.';
             navigator.clipboard.writeText(texto).then(() => {
                 copiarBtn.textContent = '¡Copiado!';
+                // Reproduce el sonido al copiar
+                audioCopiar.currentTime = 0;
+                audioCopiar.play();
                 setTimeout(() => { copiarBtn.textContent = 'Copiar al portapapeles'; }, 1200);
             });
         });
